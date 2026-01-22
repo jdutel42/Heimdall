@@ -3,7 +3,7 @@
     "path": "~/Documents/Project/Heimdall/ui.R",
     "project_path": "ui.R",
     "type": "r_source",
-    "hash": "1241303479",
+    "hash": "0",
     "contents": "",
     "dirty": false,
     "created": 1769071609308.0,
@@ -12,15 +12,15 @@
     "properties": {
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "95,20",
-        "scrollLine": "84"
+        "cursorPosition": "97,10",
+        "scrollLine": "77"
     },
     "folds": "",
-    "lastKnownWriteTime": 1769076828,
+    "lastKnownWriteTime": 1769077296,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1769076828038,
+    "last_content_update": 1769077296394,
     "read_only": false,
     "read_only_alternatives": []
 }

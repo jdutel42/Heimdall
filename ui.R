@@ -93,6 +93,13 @@ ui <- fluidPage(
       # ---- Plot Tuning Metadata ---- #
       ##################################
       
+      shinycssloaders::withSpinner(
+        uiOutput("metadata_ui")
+        ),
+    
+      
+      
+      
       # selectInput(
       #   "metadata",
       #   "Choose a metadata to display",

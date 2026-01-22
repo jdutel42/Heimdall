@@ -52,6 +52,35 @@ server <- function(input, output, session) {
       )
     )
   })
+  
+  
+  ######################
+  # ---- Metadata ---- #
+  ######################
+  
+  # # Create a nested list to store all possible metavalues in each col
+  output$metadata_ui <- renderUI({
+    req(sce_obj())
+    
+    # Store names of metadata present in the SCE object
+    colnames_metadata_list <- colnames(colData(sce_obj()))
+    # If col have more than 20 unique value are present, remove them from the choices
+    colnames_metadata_list <- colnames_metadata_list[sapply(colnames_metadata_list, function(col) {
+      length(unique(colData(sce_obj())[[col]])) <= 30
+    })]
+    # colnames_metadata_list <- setdiff(colnames_metadata_list, c("nCounts", "nFeatures"))
+    
+    selectInput(
+      "metadata",
+      "Choose a metadata to display",
+      choices = setNames(
+        lapply(colnames_metadata_list, function(col) {
+          unique(colData(sce_obj())[[col]])
+        }),
+        colnames_metadata_list
+      )
+    )
+  })
 
   
   #########################
@@ -141,11 +170,14 @@ server <- function(input, output, session) {
   )
 
 
-  ######################
-  # ---- Metadata ---- #
-  ######################
   
-  # # Create a nested list to store all possible metavalues in each col
+  
+  
+  
+  
+  
+  
+  
   # nested_list_metadata <- reactive({
   #   
   #   # Store names of metadata present in the SCE object
