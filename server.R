@@ -78,7 +78,7 @@ server <- function(input, output, session) {
           unique(colData(sce_obj())[[col]])
         }),
         colnames_metadata_list
-      )
+      ),
     )
   })
 
@@ -119,6 +119,9 @@ server <- function(input, output, session) {
     
     # print("Ok3.1")
     
+    # Metadata
+    
+    
     # Combine
     df <- cbind(
       as.data.frame(emb),
@@ -136,16 +139,59 @@ server <- function(input, output, session) {
     
     # print("Ok5")
     
-    ggplot2::ggplot(
+    #   ggplot2::ggplot(
+    #     df_long,
+    #     ggplot2::aes(x = Dim1, y = Dim2, color = Expression)
+    #   ) +
+    #     ggplot2::geom_point(size = input$pt_size) +
+    #     ggplot2::scale_color_gradient(low = "lightgrey", high = "blue") +
+    #     ggplot2::facet_wrap(~ gene) +
+    #     ggplot2::theme_classic(base_size = 16, base_line_size = 0.5, base_rect_size = 0.5, ink = "black")
+    #     # ggplot2::theme_bw()
+    # })
+    
+    
+    
+    p <- ggplot2::ggplot(
       df_long,
-      ggplot2::aes(x = Dim1, y = Dim2, color = Expression)
+      ggplot2::aes(x = Dim1, y = Dim2)
     ) +
       ggplot2::geom_point(size = input$pt_size) +
-      ggplot2::scale_color_gradient(low = "lightgrey", high = "blue") +
       ggplot2::facet_wrap(~ gene) +
-      ggplot2::theme_classic(base_size = 16, base_line_size = 0.5, base_rect_size = 0.5, ink = "black")
-      # ggplot2::theme_bw()
+      ggplot2::theme_classic(
+        base_size = 16,
+        base_line_size = 0.5,
+        base_rect_size = 0.5,
+        ink = "black"
+      )
+    
+    if (is.null(input$metadata) || input$metadata == "") {
+      
+      ## 🔹 Par défaut : expression
+      p <- p +
+        ggplot2::aes(color = Expression) +
+        ggplot2::scale_color_gradient(
+          low = "lightgrey",
+          high = "blue"
+        )
+      
+    } else {
+      
+      ## 🔹 Metadata sélectionnée
+      p <- p +
+        ggplot2::aes(color = colData(sce_obj())[[input$metadata]])
+      
+      ## Optionnel : adapter l’échelle selon le type
+      if (is.numeric(df_long[[input$metadata]])) {
+        p <- p + ggplot2::scale_color_viridis_c()
+      } else {
+        p <- p + ggplot2::scale_color_brewer(palette = "Set2")
+      }
+    }
+    
+    p
   })
+  
 
   ## Ploting featureplot
   output$featureplot <- renderPlot({
