@@ -6,8 +6,11 @@ server <- function(input, output, session) {
   #############################
   
   sce_obj <- reactive({
+    
     req(input$sce_rds)
+    
     sce <- readRDS(input$sce_rds$datapath)
+    
     validate(
       need(
         inherits(sce, "SingleCellExperiment"),
@@ -24,12 +27,48 @@ server <- function(input, output, session) {
   #############################
   
   output$assay_ui <- renderUI({
-    req(sce_obj())
+    
+    req(input$sce_rds)
+    
     selectInput(
       "assay",
-      "Assay",
+      "2. Which assay ?",
       choices = assayNames(sce_obj()),
       selected = assayNames(sce_obj())[1]
+    )
+  })
+  
+  
+  #################################
+  # ---- Embedding selection ---- #
+  #################################
+  
+  output$embedding_ui <- renderUI({
+    
+    req(input$assay)
+    
+    selectInput(
+      "embedding",
+      "3. Which embedding ?",
+      choices = reducedDimNames(sce_obj()),
+      selected = reducedDimNames(sce_obj())[1]
+    )
+  })
+
+  ###############################
+  # ---- Feature selection ---- #
+  ###############################
+  
+  output$feature_ui <- renderUI({
+    
+    req(input$embedding)
+    
+    selectInput(
+      "feature",
+      "4. Which features ?",
+      # choices = c("UMAP_uwot", "TSNE", "PCA"),
+      choices = c("Expression", "Clusters", "Others Metadata"),
+      selected = "Expression"
     )
   })
 
@@ -39,11 +78,11 @@ server <- function(input, output, session) {
   ############################
 
   output$gene_ui <- renderUI({
-    req(sce_obj(), input$assay)
+    req(sce_obj(), input$embedding)
     genes <- rownames(assay(sce_obj(), input$assay))
     selectizeInput(
       "genes",
-      "Gene(s)",
+      "Which Gene(s) ?",
       choices = genes,
       multiple = TRUE,
       options = list(
@@ -65,22 +104,42 @@ server <- function(input, output, session) {
     # Store names of metadata present in the SCE object
     colnames_metadata_list <- colnames(colData(sce_obj()))
     # If col have more than 20 unique value are present, remove them from the choices
-    colnames_metadata_list <- colnames_metadata_list[sapply(colnames_metadata_list, function(col) {
-      length(unique(colData(sce_obj())[[col]])) <= 30
-    })]
+    # colnames_metadata_list <- colnames_metadata_list[sapply(colnames_metadata_list, function(col) {
+    #   length(unique(colData(sce_obj())[[col]])) <= 30
+    # })]
     # colnames_metadata_list <- setdiff(colnames_metadata_list, c("nCounts", "nFeatures"))
     
     selectInput(
-      "metadata",
-      "Choose a metadata to display",
-      choices = setNames(
-        lapply(colnames_metadata_list, function(col) {
-          unique(colData(sce_obj())[[col]])
-        }),
-        colnames_metadata_list
-      ),
+      "metadata_col",
+      "Choose data to color by",
+      choices = colnames_metadata_list
     )
   })
+  
+  # output$metadata_val_ui <- renderUI({
+  #   req(sce_obj(), input$metadata_col)
+  #   
+  #   vals <- unique(colData(sce_obj())[[input$metadata_col]])
+  #   
+  #   selectInput(
+  #     "metadata_val",
+  #     "Choose metadata value",
+  #     choices = vals
+  #   )
+  # })
+  
+    # selectInput(
+    #   "metadata_val",
+    #   "Choose a metadata to display",
+    #   choices = setNames(
+    #     lapply(colnames_metadata_list, function(col) {
+    #       unique(colData(sce_obj())[[col]])
+    #     }),
+    #     colnames_metadata_list
+    #   ),
+    # )
+
+
 
   
   #########################
@@ -92,43 +151,36 @@ server <- function(input, output, session) {
     sce <- sce_obj()
     validate(
       need(
-        input$reduction %in% reducedDimNames(sce),
+        input$embedding %in% reducedDimNames(sce),
         paste(
-          "Reduction",
-          input$reduction,
+          "embedding",
+          input$embedding,
           "not found in object. Ask bioinfo to compute it."
         )
       )
     )
     
-    # print("Ok1")
+    # Create the data.frame for ggplot
     
-    # Coordinates
-    emb <- as.data.frame(reducedDim(sce, input$reduction))
+    ## Coordinates embedding
+    emb <- as.data.frame(reducedDim(sce, input$embedding))
     colnames(emb)[1:2] <- c("Dim1", "Dim2")
     
-    # print("Ok2")
+    ## Expression values
+    expr_assay <- assay(sce, input$assay)[input$genes, , drop = FALSE]
+    ### Convert sparse matrix -> dense matrix
+    expr_mat <- as.matrix(expr_assay)
+    expr <- as.data.frame(t(expr_mat))
     
-    # Expression
-    expr <- assay(sce, input$assay)[input$genes, , drop = FALSE]
+    ## Metadata
+    meta <- as.data.frame(colData(sce))
     
-    # print("Ok3")
-    
-    # Convert sparse matrix -> dense matrix
-    expr_mat <- as.matrix(expr)
-    
-    # print("Ok3.1")
-    
-    # Metadata
-    
-    
-    # Combine
+    ## Combine
     df <- cbind(
-      as.data.frame(emb),
-      as.data.frame(t(expr_mat))
+      emb,
+      expr,
+      meta
     )
-    
-    # print("Ok4")
     
     df_long <- tidyr::pivot_longer(
       df,
@@ -136,8 +188,6 @@ server <- function(input, output, session) {
       names_to = "gene",
       values_to = "Expression"
     )
-    
-    # print("Ok5")
     
     #   ggplot2::ggplot(
     #     df_long,
@@ -165,9 +215,11 @@ server <- function(input, output, session) {
         ink = "black"
       )
     
-    if (is.null(input$metadata) || input$metadata == "") {
+    print(df_long)
+    
+    if (is.null(input$metadata_col) || input$metadata_col == "") {
       
-      ## 🔹 Par défaut : expression
+      ## Par défaut : expression
       p <- p +
         ggplot2::aes(color = Expression) +
         ggplot2::scale_color_gradient(
@@ -177,16 +229,16 @@ server <- function(input, output, session) {
       
     } else {
       
-      ## 🔹 Metadata sélectionnée
+      ## Metadata sélectionnée
       p <- p +
-        ggplot2::aes(color = colData(sce_obj())[[input$metadata]])
+        ggplot2::aes(color = .data[[input$metadata_col]])
       
-      ## Optionnel : adapter l’échelle selon le type
-      if (is.numeric(df_long[[input$metadata]])) {
-        p <- p + ggplot2::scale_color_viridis_c()
-      } else {
-        p <- p + ggplot2::scale_color_brewer(palette = "Set2")
-      }
+      # ## Optionnel : adapter l’échelle selon le type
+      # if (is.numeric(df_long[[input$metadata_col]])) {
+      #   p <- p + ggplot2::scale_color_viridis_c()
+      # } else {
+      #   p <- p + ggplot2::scale_color_brewer(palette = "Set2")
+      # }
     }
     
     p
@@ -195,7 +247,7 @@ server <- function(input, output, session) {
 
   ## Ploting featureplot
   output$featureplot <- renderPlot({
-    req(sce_obj(), input$genes, input$assay, input$reduction)
+    req(sce_obj(), input$genes, input$assay, input$embedding)
     featureplot_obj()
   })
   

@@ -42,7 +42,7 @@ ui <- fluidPage(
       
       fileInput(
         "sce_rds",
-        "Upload SCE object (.rds)",
+        "1. Upload data (SCE object .rds)",
         accept = ".rds"
       ),
       
@@ -50,9 +50,31 @@ ui <- fluidPage(
       # ---- Assay ---- #
       ###################
       
-      shinycssloaders::withSpinner(
-        uiOutput("assay_ui")
-      ),
+      uiOutput("assay_ui"),
+      
+      #######################
+      # ---- Embedding ---- #
+      #######################
+      
+      uiOutput("embedding_ui"),
+      
+      # Change this part to dynamically get the available reductions from the SCE object !!!!!
+      
+      # selectInput(
+      #   "reduction",
+      #   "3. Which embedding ?",
+      #   # choices = c("UMAP_uwot", "TSNE", "PCA"),
+      #   choices = c("PCA", "TSNE", "UMAP"),
+      #   selected = "UMAP"
+      # ),
+      
+      #######################
+      # ---- Features ---- #
+      #######################
+      
+      # Change this part to dynamically get the available reductions from the SCE object !!!!!
+      
+      uiOutput("feature_ui"),
       
       ###################
       # ---- Genes ---- #
@@ -62,17 +84,6 @@ ui <- fluidPage(
         uiOutput("gene_ui")
       ),
       
-      #######################
-      # ---- Reduction ---- #
-      #######################
-      
-      selectInput(
-        "reduction",
-        "Embedding",
-        # choices = c("UMAP_uwot", "TSNE", "PCA"),
-        choices = c("PCA", "TSNE", "UMAP"),
-        selected = "UMAP"
-      ),
       
       
       #########################
@@ -95,7 +106,11 @@ ui <- fluidPage(
       
       shinycssloaders::withSpinner(
         uiOutput("metadata_ui")
-        ),
+      ),
+      
+      # shinycssloaders::withSpinner(
+      #   uiOutput("metadata_val_ui")
+      # ),
     
       
       
