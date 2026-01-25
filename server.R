@@ -66,8 +66,7 @@ server <- function(input, output, session) {
     selectInput(
       "feature",
       "4. Which features ?",
-      # choices = c("UMAP_uwot", "TSNE", "PCA"),
-      choices = c("Expression", "Clusters", "Others Metadata"),
+      choices = c("Expression", colnames(colData(sce_obj()))),
       selected = "Expression"
     )
   })
@@ -78,8 +77,11 @@ server <- function(input, output, session) {
   ############################
 
   output$gene_ui <- renderUI({
-    req(sce_obj(), input$embedding)
+    
+    req(input$feature == "Expression")
+    
     genes <- rownames(assay(sce_obj(), input$assay))
+    
     selectizeInput(
       "genes",
       "Which Gene(s) ?",
@@ -146,48 +148,81 @@ server <- function(input, output, session) {
   # ---- FeaturePlot ---- #
   #########################
   
+    #################################
+    # ---- Gather informations ---- #
+    #################################
+  
+  # Create a reactive data.frame for ggplot
+  
+  df_plot <- reactive({
+    sce <- sce_obj()
+    
+    df_emb <- as.data.frame(reducedDim(sce, input$embedding))
+    colnames(df_emb)[1:2] <- c("Dim1", "Dim2")
+    df_emb <- df_emb[, 1:2]
+    
+    df_meta <- as.data.frame(colData(sce))
+    
+    if (input$feature == "Expression") {
+      
+      expr_mat <- assay(sce, input$assay)[input$genes, , drop = FALSE] |>
+        as.matrix() |>
+        t() |>
+        as.data.frame()
+      
+      df <- cbind(df_emb, df_meta, expr_mat)
+      
+      tidyr::pivot_longer(
+        df,
+        cols = all_of(input$genes),
+        names_to = "gene",
+        values_to = "Expression"
+      )
+      
+    } else {
+      cbind(df_emb, df_meta)
+    }
+  })
+  
+
+
+  
   ## Calculate
   featureplot_obj <- reactive({
-    sce <- sce_obj()
-    validate(
-      need(
-        input$embedding %in% reducedDimNames(sce),
-        paste(
-          "embedding",
-          input$embedding,
-          "not found in object. Ask bioinfo to compute it."
+    df <- df_plot()
+    
+    if (input$feature == "Expression") {
+      ggplot2::ggplot(
+        df,
+        ggplot2::aes(Dim1, Dim2, color = Expression)
+      ) +
+        ggplot2::geom_point(size = input$pt_size) +
+        ggplot2::scale_color_gradient(low = "lightgrey", high = "blue") +
+        ggplot2::facet_wrap(~ gene) +
+        ggplot2::theme_classic(base_size = 16)
+      
+    } else {
+      ggplot2::ggplot(
+        df,
+        ggplot2::aes(
+          Dim1,
+          Dim2,
+          color = .data[[input$feature]]
         )
-      )
-    )
+      ) +
+        ggplot2::geom_point(size = input$pt_size) +
+        ggplot2::scale_color_brewer(palette = "Set2") +
+        ggplot2::theme_classic(base_size = 16)
+    }
+  })
+  
+  
+  
+  
+  # featureplot_obj <- reactive({
+  #   sce <- sce_obj()
+  #   
     
-    # Create the data.frame for ggplot
-    
-    ## Coordinates embedding
-    emb <- as.data.frame(reducedDim(sce, input$embedding))
-    colnames(emb)[1:2] <- c("Dim1", "Dim2")
-    
-    ## Expression values
-    expr_assay <- assay(sce, input$assay)[input$genes, , drop = FALSE]
-    ### Convert sparse matrix -> dense matrix
-    expr_mat <- as.matrix(expr_assay)
-    expr <- as.data.frame(t(expr_mat))
-    
-    ## Metadata
-    meta <- as.data.frame(colData(sce))
-    
-    ## Combine
-    df <- cbind(
-      emb,
-      expr,
-      meta
-    )
-    
-    df_long <- tidyr::pivot_longer(
-      df,
-      cols = all_of(input$genes),
-      names_to = "gene",
-      values_to = "Expression"
-    )
     
     #   ggplot2::ggplot(
     #     df_long,
@@ -200,54 +235,113 @@ server <- function(input, output, session) {
     #     # ggplot2::theme_bw()
     # })
     
+    ######################
+    # ---- Plotting ---- #
+    ######################
     
-    
-    p <- ggplot2::ggplot(
-      df_long,
-      ggplot2::aes(x = Dim1, y = Dim2)
-    ) +
-      ggplot2::geom_point(size = input$pt_size) +
-      ggplot2::facet_wrap(~ gene) +
-      ggplot2::theme_classic(
-        base_size = 16,
-        base_line_size = 0.5,
-        base_rect_size = 0.5,
-        ink = "black"
-      )
-    
-    print(df_long)
-    
-    if (is.null(input$metadata_col) || input$metadata_col == "") {
+    featureplot_obj <- reactive({
       
-      ## Par défaut : expression
-      p <- p +
-        ggplot2::aes(color = Expression) +
-        ggplot2::scale_color_gradient(
-          low = "lightgrey",
-          high = "blue"
+      validate(
+        need(
+          input$embedding %in% reducedDimNames(sce_obj()),
+          paste(
+            "embedding",
+            input$embedding,
+            "not found in object. Ask bioinfo to compute it."
+          )
         )
+      )
       
-    } else {
+      df <- df_plot()
       
-      ## Metadata sélectionnée
-      p <- p +
-        ggplot2::aes(color = .data[[input$metadata_col]])
-      
+      if (input$feature == "Expression") {
+        ggplot2::ggplot(
+          df,
+          ggplot2::aes(Dim1, Dim2, color = Expression)
+        ) +
+          ggplot2::geom_point(size = input$pt_size) +
+          ggplot2::scale_color_gradient(low = "lightgrey", high = "blue") +
+          ggplot2::facet_wrap(~ gene) +
+          ggplot2::theme_classic(base_size = 16)
+        
+      } else {
+        ggplot2::ggplot(
+          df,
+          ggplot2::aes(
+            Dim1,
+            Dim2,
+            color = .data[[input$feature]]
+          )
+        ) +
+          ggplot2::geom_point(size = input$pt_size) +
+          ggplot2::scale_color_brewer(palette = "Set2") +
+          ggplot2::theme_classic(base_size = 16)
+      }
+    })
+    
+    
+    
+    # if (input$feature == "Expression") {
+    #   p <- p +
+    #     ggplot2::aes(color = Expression) +
+    #     ggplot2::scale_color_gradient(low = "lightgrey",
+    #                                   high = "blue")
+    # } else {
+    #   p <- p +
+    #     ggplot2::aes(color = .data[[input$feature]]) +
+    #     ggplot2::scale_color_brewer(palette = "Set2")
+    # }
+    
+    # p
+    
+    # if (is.numeric(df_long[[input$feature]])) {
+    #   p <- p +
+    #     ggplot2::scale_color_gradient(low = "lightgrey",
+    #                                   high = "blue")
+    #   
+    # } else {
+    #   p <- p +
+    #     ggplot2::scale_color_brewer(palette = "Set2")
+
       # ## Optionnel : adapter l’échelle selon le type
       # if (is.numeric(df_long[[input$metadata_col]])) {
       #   p <- p + ggplot2::scale_color_viridis_c()
       # } else {
       #   p <- p + ggplot2::scale_color_brewer(palette = "Set2")
       # }
-    }
-    
-    p
-  })
+    # }
+    # if (is.null(input$metadata_col) || input$metadata_col == "") {
+    #   
+    #   ## Par défaut : expression
+    #   p <- p +
+    #     ggplot2::aes(color = Expression) +
+    #     ggplot2::scale_color_gradient(
+    #       low = "lightgrey",
+    #       high = "blue"
+    #     )
+    #   
+    # } else {
+    #   
+    #   ## Metadata sélectionnée
+    #   p <- p +
+    #     ggplot2::aes(color = .data[[input$metadata_col]])
+    #   
+    #   # ## Optionnel : adapter l’échelle selon le type
+    #   # if (is.numeric(df_long[[input$metadata_col]])) {
+    #   #   p <- p + ggplot2::scale_color_viridis_c()
+    #   # } else {
+    #   #   p <- p + ggplot2::scale_color_brewer(palette = "Set2")
+    #   # }
+    # }
+    # 
+    # p
+  # })
   
-
   ## Ploting featureplot
   output$featureplot <- renderPlot({
+    
     req(sce_obj(), input$genes, input$assay, input$embedding)
+    
     featureplot_obj()
   })
   

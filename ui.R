@@ -9,6 +9,7 @@ library(shiny)
 library(ggplot2)
 library(SingleCellExperiment)
 library(shinycssloaders)
+library(dplyr)
 
 ###########
 # Options #
@@ -104,10 +105,10 @@ ui <- fluidPage(
       # ---- Plot Tuning Metadata ---- #
       ##################################
       
-      shinycssloaders::withSpinner(
-        uiOutput("metadata_ui")
-      ),
-      
+      # shinycssloaders::withSpinner(
+      #   uiOutput("metadata_ui")
+      # ),
+      # 
       # shinycssloaders::withSpinner(
       #   uiOutput("metadata_val_ui")
       # ),
