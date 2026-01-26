@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
+=======
+.Rproj.user/
+>>>>>>> 7afcfb4 (Ignore RStudio project files)
+.Rproj.user/
