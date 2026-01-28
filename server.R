@@ -7,22 +7,22 @@ server <- function(input, output, session) {
   
   
   
-  sce_obj <- reactive({
-    
-    req(input$sce_rds)
-    
-    sce <- readRDS(input$sce_rds$datapath)
-    
-    validate(
-      need(
-        inherits(sce, "SingleCellExperiment"),
-        "The uploaded file is not a SingleCellExperiment object"
-      )
-    )
-    
-    sce
-
-  })
+  # sce_obj <- reactive({
+  #   
+  #   req(input$sce_rds)
+  #   
+  #   sce <- readRDS(input$sce_rds$datapath)
+  #   
+  #   validate(
+  #     need(
+  #       inherits(sce, "SingleCellExperiment"),
+  #       "The uploaded file is not a SingleCellExperiment object"
+  #     )
+  #   )
+  #   
+  #   sce
+  # 
+  #   })
   
   output$qs_ui <- renderUI({
     
@@ -38,9 +38,9 @@ server <- function(input, output, session) {
     req(input$data_input)
     
     if (grepl("\\.qs$", input$data_input$name, ignore.case = TRUE)) {
-      sce <- qread(input$data_input$datapath)
+      obj <- qread(input$data_input$datapath)
     } else if (grepl("\\.rds$", input$data_input$name, ignore.case = TRUE)) {
-      sce <- readRDS(input$data_input$datapath)
+      obj <- readRDS(input$data_input$datapath)
     } else {
       showNotification(
         "Unsupported file format. Please upload a .rds or .qs file.",
@@ -50,9 +50,23 @@ server <- function(input, output, session) {
       return(NULL)
     }
     
+    # détection / conversion
+    if (inherits(obj, "Seurat")) {
+      message("Seurat object detected → converting to SCE")
+      sce <- as.SingleCellExperiment(obj)
+    } else if (inherits(obj, "SingleCellExperiment")) {
+      sce <- obj
+    } else {
+      showNotification(
+        "Object must be a Seurat or SingleCellExperiment",
+        type = "error"
+      )
+      return(NULL)
+    }
+    
     sce
   })
-
+  
   observeEvent(sce_obj(), {
     showNotification(
       "Data successfully loaded!",

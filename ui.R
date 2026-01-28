@@ -90,19 +90,13 @@ ui <- page_fillable(
             # ---- Input file ---- #
             ########################
             
-            fileInput(
-              "sce_rds",
-              "1. Upload SingleCellExperiment RDS file",
-              accept = c(".rds", ".RDS")
-            ),
-            
             uiOutput("qs_ui"),
             
-            p(
-              "The uploaded object must be a valid ",
-              tags$code("SingleCellExperiment"),
-              " containing assays, reduced dimensions, and metadata."
-            ),
+            # p(
+            #   "The uploaded object must be a valid ",
+            #   tags$code("SingleCellExperiment"),
+            #   " containing assays, reduced dimensions, and metadata."
+            # ),
             
             # shinyFeedback::feedbackDanger(
             #   "sce_rds",
