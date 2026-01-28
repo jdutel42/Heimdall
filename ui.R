@@ -96,7 +96,7 @@ ui <- page_fillable(
               accept = c(".rds", ".RDS")
             ),
             
-            # uiOutput("qs_ui"),  
+            uiOutput("qs_ui"),
             
             p(
               "The uploaded object must be a valid ",

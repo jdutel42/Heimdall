@@ -5,6 +5,8 @@ server <- function(input, output, session) {
   # ---- Load SCE object ---- #
   #############################
   
+  
+  
   sce_obj <- reactive({
     
     req(input$sce_rds)
@@ -21,9 +23,36 @@ server <- function(input, output, session) {
     sce
 
   })
-
-
   
+  output$qs_ui <- renderUI({
+    
+    fileInput(
+      "data_input",
+      "1. Upload data file",
+      accept = c(".rds", ".RDS", ".qs", ".QS")
+    )
+  })
+  
+  sce_obj <- reactive({
+    
+    req(input$data_input)
+    
+    if (grepl("\\.qs$", input$data_input$name, ignore.case = TRUE)) {
+      sce <- qread(input$data_input$datapath)
+    } else if (grepl("\\.rds$", input$data_input$name, ignore.case = TRUE)) {
+      sce <- readRDS(input$data_input$datapath)
+    } else {
+      showNotification(
+        "Unsupported file format. Please upload a .rds or .qs file.",
+        type = "error",
+        duration = 5
+      )
+      return(NULL)
+    }
+    
+    sce
+  })
+
   observeEvent(sce_obj(), {
     showNotification(
       "Data successfully loaded!",
@@ -58,7 +87,7 @@ server <- function(input, output, session) {
   
   output$assay_ui <- renderUI({
     
-    req(input$sce_rds)
+    req(input$data_input)
     
     selectInput(
       "assay",
