@@ -125,24 +125,6 @@ ui <- page_fillable(
           )
         )
       ),
-      
-    #   # ======================
-    #   # ---- FeaturePlot ---- #
-    #   # ======================
-    #   
-    #   nav_panel(
-    #     "FeaturePlot",
-    #     "FeaturePlot UI here"
-    #   ),
-    #   
-    #   # =========================
-    #   # ---- Cell Explorer ---- #
-    #   # =========================
-    #   
-    #   nav_panel(
-    #     "Cell Explorer",
-    #     "Cell Explorer UI here"
-    #   )
     ),
     
     #############################
@@ -264,6 +246,10 @@ ui <- page_fillable(
           )
         )
       )
+    ),
+    
+    nav_panel("Statistics table",
+              "Work in progress..."
     ),
     
     nav_panel("VolcanoPlot",
